@@ -57,7 +57,7 @@ unsigned long int ht_hash( HashTable ht, char *key ) {
 }
 
 Entry ht_newpair(char *key, unsigned int depth , unsigned long sn , unsigned int size , char flag ,
-                 unsigned long physical_sn , char dedup_type , PMemory_pool mem_pool){
+                 unsigned long physical_sn , char dedup_type , char* parent_dir_id , PMemory_pool mem_pool){
 
     Entry newpair  = memory_pool_alloc(mem_pool , sizeof(*newpair));
     if(newpair == NULL){
@@ -74,9 +74,9 @@ Entry ht_newpair(char *key, unsigned int depth , unsigned long sn , unsigned int
     if(flag == 'B'){ // save the data object
         newpair->data = block_create(key , sn, size , mem_pool);
     }else if( flag == 'D'){
-        newpair->data = dir_create(key , depth , sn , mem_pool);
+        newpair->data = dir_create(key , depth , sn , parent_dir_id , mem_pool);
     } else if(flag == 'F'){ //This is a file object
-        newpair->data = file_create(key , depth , sn , size , physical_sn , dedup_type , mem_pool);
+        newpair->data = file_create(key , depth , sn , size , physical_sn , dedup_type , parent_dir_id , mem_pool);
     }
 
     if(newpair->data == NULL) {
@@ -88,7 +88,8 @@ Entry ht_newpair(char *key, unsigned int depth , unsigned long sn , unsigned int
 }
 
 Data ht_set(HashTable ht, char *key, unsigned int depth , unsigned long sn , unsigned int size , char flag,
-            bool* object_exists , unsigned long physical_sn, char dedup_type, PMemory_pool mem_pool) {
+            bool* object_exists , unsigned long physical_sn, char dedup_type, char* parent_dir_id ,
+            PMemory_pool mem_pool) {
     Entry newpair = NULL;
     Entry next = NULL;
     Entry last = NULL;
@@ -97,7 +98,7 @@ Data ht_set(HashTable ht, char *key, unsigned int depth , unsigned long sn , uns
     next = ht->table[hash_key];
 
     if(dedup_type == 'B' && flag == 'F'){// We are using Block Level Deduplication and we are working on File object
-        newpair = ht_newpair(key, depth , sn, size, flag , physical_sn, dedup_type , mem_pool);
+        newpair = ht_newpair(key, depth , sn, size, flag , physical_sn, dedup_type , parent_dir_id, mem_pool);
         newpair->next = next;
         ht->table[hash_key] = newpair;
         return newpair->data;
@@ -118,7 +119,7 @@ Data ht_set(HashTable ht, char *key, unsigned int depth , unsigned long sn , uns
         *object_exists = true;
         return next->data;
     } else { /* Nope, could't find it.  Time to grow a pair. */
-        newpair = ht_newpair(key, depth , sn, size, flag , physical_sn , dedup_type , mem_pool); //allocate new pair
+        newpair = ht_newpair(key, depth , sn, size, flag , physical_sn , dedup_type , parent_dir_id , mem_pool); //allocate new pair
         if(newpair == NULL){
             return NULL;
         }

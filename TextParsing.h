@@ -96,12 +96,12 @@ char* case_7_hash_file_id(char buff[BUFFER_SIZE], char* file_system_id);
  * @physical_files_sn       - Pointer to serial number counter fo physical file objects
  * @blocks_sn               - Pointer to serial number counter fo block objects
  */
-void case_13_VS(FILE *input_file , char buff[BUFFER_SIZE] , int* block_line_count ,
+File case_13_VS(FILE *input_file , char buff[BUFFER_SIZE] , int* block_line_count ,
                 bool* read_empty_line_chucnks ,unsigned short depth, char* object_id,
                 unsigned int file_size , bool* file_was_created, bool* finished_process_blocks ,
                 PMemory_pool mem_pool,char dedup_type,
                 HashTable ht_files , HashTable ht_blocks, HashTable ht_physical_files,
-                unsigned long *files_sn , unsigned long *physical_files_sn, unsigned long *blocks_sn);
+                unsigned long *files_sn , unsigned long *physical_files_sn, unsigned long *blocks_sn, char* parent_dir_id);
 /*
  * update_parent_dir_sn - receives a list of descriptors of objects from current depth and previous depth
  *                        and updates the file hierarchy
@@ -116,7 +116,8 @@ void case_13_VS(FILE *input_file , char buff[BUFFER_SIZE] , int* block_line_coun
  * @roots            - Pointer to array of root directories
  */
 void update_parent_dir_sn(List previous , List current , int global_depth , int input_file_index ,
-                          PMemory_pool mem_pool , HashTable ht_files , HashTable ht_dirs , Dir* roots);
+                          PMemory_pool mem_pool , HashTable ht_files , HashTable ht_dirs , Dir* roots,
+                          char* curr_depth_objects_type , char* previous_depth_objects_type);
 
 /*
  * print_ht_to_CSV - Print into a csv file that starts with "Parsing_Results.." the data about

@@ -25,7 +25,7 @@ struct file_t{
     unsigned long object_sn;
     char* object_id;
     unsigned long parent_dir_sn;
-    char object_type;
+    char* parent_dir_id;
 
     int file_depth;
     char flag; // L - logical_file , P - physical_file
@@ -59,7 +59,7 @@ typedef struct file_t *File;
  * @physical_sn - in case of file level deduplication, there are 2 types of files - physical and logical
  */
 File file_create(char* file_id , unsigned int depth , unsigned long file_sn , unsigned int size ,
-                 unsigned long physical_sn , char dedup_type , PMemory_pool mem_pool);
+                 unsigned long physical_sn , char dedup_type , char* parent_dir_id, PMemory_pool mem_pool);
 
 /*
  *  file_get_num_blocks - returns the number of blocks the file contains

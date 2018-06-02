@@ -39,7 +39,7 @@ static  void free_dir_info(ListElement directory_info){
 /* ****************************************************************************************************************** */
 /* ****************************************************************************************************************** */
 /* ****************** START ****************** Directory STRUCT Functions ****************** START ****************** */
-Dir dir_create(char* dir_id , unsigned int depth , unsigned long dir_sn , PMemory_pool mem_pool){
+Dir dir_create(char* dir_id , unsigned int depth , unsigned long dir_sn , char* parent_dir_id ,PMemory_pool mem_pool){
     Dir dir = memory_pool_alloc(mem_pool , sizeof(*dir));
     if(dir == NULL){
         return NULL;
@@ -51,6 +51,14 @@ Dir dir_create(char* dir_id , unsigned int depth , unsigned long dir_sn , PMemor
         return NULL;
     }
     dir->object_id = strcpy(dir->object_id , dir_id);
+
+    dir->parent_dir_id = memory_pool_alloc(mem_pool , (sizeof(char)*(strlen(parent_dir_id) + 1)));
+    if(!(dir->parent_dir_id)){
+        //All is allocated in POOL - Nothing to Free
+        return NULL;
+    }
+    dir->parent_dir_id = strcpy(dir->parent_dir_id , parent_dir_id);
+
     dir->dir_depth = depth;
     dir->object_sn = dir_sn;
     dir->num_of_files = 0;

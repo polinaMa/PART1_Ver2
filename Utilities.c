@@ -4,6 +4,18 @@
 
 #include "Utilities.h"
 
+//Dummy Functions
+ListElement dummy_copy_func(ListElement element){
+    return element;
+}
+
+void dummy_free_func(ListElement element){
+    return;
+}
+
+/* ****************************************************************************************************** */
+/* ****************************************************************************************************** */
+/* ****************************************************************************************************** */
 /* ******************** START ******************** object_info struct ******************** START ******************** */
 
 Object_Info object_info_create(char* id , unsigned long sn , char* parent_id , char type){

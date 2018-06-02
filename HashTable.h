@@ -66,7 +66,7 @@ unsigned long int ht_hash( HashTable ht, char *key );
  *               - For File - size parameter will be -1
  */
 Entry ht_newpair(char *key, unsigned int depth , unsigned long sn , unsigned int size , char flag ,
-                 unsigned long physical_sn , char dedup_type , PMemory_pool mem_pool);
+                 unsigned long physical_sn , char dedup_type , char* parent_dir_id ,PMemory_pool mem_pool);
 
 /*
  * ht_set - Insert a key-value pair into a hash table (General function thus
@@ -81,7 +81,7 @@ Entry ht_newpair(char *key, unsigned int depth , unsigned long sn , unsigned int
  * @physical_sn   - the serial number of a physical file
  */
 Data ht_set(HashTable ht, char *key, unsigned int depth , unsigned long sn , unsigned int size , char flag,
-            bool* object_exists , unsigned long physical_sn, char dedup_type , PMemory_pool mem_pool);
+            bool* object_exists , unsigned long physical_sn, char dedup_type , char* parent_dir_id , PMemory_pool mem_pool);
 
 /*
  * ht_get - Retrieve pointer for block/file element with corresponding key in hash table

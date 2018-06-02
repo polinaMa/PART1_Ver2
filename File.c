@@ -4,7 +4,7 @@
 #include "File.h"
 /* ******************* START ******************* File STRUCT Functions ******************* START ******************** */
 File file_create(char* file_id , unsigned int depth , unsigned long file_sn , unsigned int size ,
-                 unsigned long physical_sn , char dedup_type , PMemory_pool mem_pool){
+                 unsigned long physical_sn , char dedup_type ,char* parent_dir_id , PMemory_pool mem_pool){
 
     File file = memory_pool_alloc(mem_pool , sizeof(*file));
     if(file == NULL){
@@ -15,11 +15,17 @@ File file_create(char* file_id , unsigned int depth , unsigned long file_sn , un
     if(file->object_id == NULL){
         return NULL; //All is allocated in POOL - Nothing to Free
     }
-
     file->object_id = strcpy(file->object_id , file_id);
+
+    file->parent_dir_id = memory_pool_alloc(mem_pool , sizeof(char)* (sizeof(parent_dir_id) + 1));
+    if(file->parent_dir_id == NULL){
+        return NULL; //All is allocated in POOL - Nothing to Free
+    }
+    file->parent_dir_id = strcpy(file->parent_dir_id , parent_dir_id);
+
     file->object_sn = file_sn;
     file->parent_dir_sn = 0; //not known in the time of creation
-    file->object_type = 'F';
+
 
     file->num_blocks = 0;
     file->file_depth = depth;

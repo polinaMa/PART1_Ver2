@@ -85,12 +85,12 @@ char* case_7_hash_file_id(char buff[BUFFER_SIZE], char* file_system_id){
 
 /* Line 13 is SV */
 // returns true if a file was created
-void case_13_VS(FILE *input_file , char buff[BUFFER_SIZE] , int* block_line_count ,
+File case_13_VS(FILE *input_file , char buff[BUFFER_SIZE] , int* block_line_count ,
                 bool* read_empty_line_chucnks ,unsigned short depth, char* object_id,
                 unsigned int file_size , bool* file_was_created, bool* finished_process_blocks ,
                 PMemory_pool mem_pool,char dedup_type,
                 HashTable ht_files , HashTable ht_blocks, HashTable ht_physical_files,
-                unsigned long *files_sn , unsigned long *physical_files_sn, unsigned long *blocks_sn) {
+                unsigned long *files_sn , unsigned long *physical_files_sn, unsigned long *blocks_sn , char* parent_dir_id) {
     bool read_block = false;   // Params initialization
     bool object_exists = false;
     *read_empty_line_chucnks = false;
@@ -120,16 +120,16 @@ void case_13_VS(FILE *input_file , char buff[BUFFER_SIZE] , int* block_line_coun
         }
     }
     if (*read_empty_line_chucnks == true) {
-        return;
+        return NULL;
     }
     // If we got here it means we have blocks to read - Add file to files hashtable
     File file_obj = NULL , file_obj_p = NULL;
     if(dedup_type == 'B'){ //Block level deduplication
         file_obj = ht_set(ht_files , object_id , depth ,*files_sn , file_size ,'F',
-                          &object_exists , *physical_files_sn,dedup_type , mem_pool);
+                          &object_exists , *physical_files_sn,dedup_type , parent_dir_id , mem_pool);
     } else { // File level deduplication
-        file_obj = file_create(object_id , depth , *files_sn , file_size , *physical_files_sn , dedup_type , mem_pool);
-        file_obj_p = file_create(object_id , depth , *files_sn , file_size , *physical_files_sn, dedup_type , mem_pool);
+        file_obj = file_create(object_id , depth , *files_sn , file_size , *physical_files_sn , dedup_type , parent_dir_id , mem_pool);
+        file_obj_p = file_create(object_id , depth , *files_sn , file_size , *physical_files_sn, dedup_type , parent_dir_id , mem_pool);
     }
     (*files_sn)++; // logical_files_sn
     (*physical_files_sn)++;
@@ -160,7 +160,7 @@ void case_13_VS(FILE *input_file , char buff[BUFFER_SIZE] , int* block_line_coun
                 file_add_block(file_obj_p , block_id , block_size , mem_pool);
             }
 
-            new_block = ht_set(ht_blocks , block_id , 1 , *blocks_sn , block_size , 'B', &object_exists , 0 , dedup_type , mem_pool);
+            new_block = ht_set(ht_blocks , block_id , 1 , *blocks_sn , block_size , 'B', &object_exists , 0 , dedup_type , parent_dir_id , mem_pool);
             block_add_file(new_block , file_obj->object_id , mem_pool);
 
             if(object_exists == false){
@@ -177,89 +177,18 @@ void case_13_VS(FILE *input_file , char buff[BUFFER_SIZE] , int* block_line_coun
     if(dedup_type == 'F'){ // Check if physical file already exists
         file_compare(ht_files ,ht_physical_files ,  file_obj , file_obj_p , physical_files_sn , dedup_type , mem_pool);
     }
-    return;
+    return file_obj;
 }
 
-//void update_parent_dir_sn(List previous , List current , int global_depth , int input_file_index ,
-//                          PMemory_pool mem_pool , HashTable ht_files , HashTable ht_dirs , Dir* roots){
-//    File temp_file = NULL;
-//    Dir temp_dir = NULL;
-//    Object_Info prev_list_iterator = NULL;
-//    Object_Info curr_list_iterator = NULL;
-//    int curr_level_objects_count = 0 , prev_list_size = 0 , curr_list_size = 0;
-//
-//    if(global_depth == 0){ //We are at root Level directory just set everyone to be the children of root
-//        unsigned long root_sn = roots[input_file_index]->object_sn;
-//        //Set root to be its own child
-//        dir_set_parent_dir_sn(roots[input_file_index] , root_sn);
-//        dir_add_sub_dir(roots[input_file_index] , root_sn , mem_pool);
-//
-//        LIST_FOREACH(Object_Info , iter ,current){
-//            if(iter->object_type == 'F'){
-//                temp_file = (File)(ht_get(ht_files , iter->object_id));
-//                assert(temp_file);
-//                file_set_parent_dir_sn(temp_file ,root_sn);
-//                dir_add_file(roots[input_file_index],temp_file->object_sn , mem_pool);
-//
-//            } else{
-//                temp_dir = (Dir)(ht_get(ht_dirs , iter->object_id));
-//                assert(temp_dir);
-//                dir_set_parent_dir_sn(temp_dir , root_sn);
-//                dir_add_sub_dir(roots[input_file_index],temp_dir->object_sn , mem_pool);
-//            }
-//        }
-//
-//    }else{ //Go over both lists and update accordingly
-//        prev_list_iterator = listGetFirst(previous);
-//        curr_list_iterator = listGetFirst(current);
-//        curr_level_objects_count = 0;
-//        prev_list_size = listGetSize(previous);
-//        curr_list_size = listGetSize(current);
-//
-//        for(int i = 0 ; i < prev_list_size ; i++){ //iterate over Previous level list
-//            unsigned long current_sn_to_set = prev_list_iterator->object_sn;
-//            Dir parent_dir_object = (Dir)(ht_get(ht_dirs , prev_list_iterator->object_id));
-//
-//            if(prev_list_iterator->object_type == 'F'){ //A File cant be Parent directory for anyone
-//                prev_list_iterator = listGetNext(previous); //advance to the next object in the previous level
-//                continue;
-//            }else{ //The object is a directory it can be a parent
-//                if(curr_level_objects_count >= curr_list_size){
-//                    prev_list_iterator = listGetNext(previous); //advance to the next object in the previous level
-//                    continue;
-//                }
-//                char* parent_id = curr_list_iterator->parent_dir_id;
-//                //now lets iterate over the current list while we have objects with the same parent id
-//                while((curr_list_iterator != NULL)&&(strcmp(parent_id , curr_list_iterator->parent_dir_id) == 0)){
-//                    if(curr_list_iterator->object_type == 'F'){
-//                        temp_file = (File)(ht_get(ht_files , curr_list_iterator->object_id));
-//                        assert(temp_file);
-//                        file_set_parent_dir_sn(temp_file ,current_sn_to_set);
-//                        //add to the prevDir object - dir_add_file
-//                        dir_add_file(parent_dir_object ,curr_list_iterator->object_sn , mem_pool);
-//                    } else{
-//                        temp_dir = (Dir)(ht_get(ht_dirs , curr_list_iterator->object_id));
-//                        assert(temp_dir);
-//                        dir_set_parent_dir_sn(temp_dir , current_sn_to_set);
-//                        //add to the prevDir object - dir_add_sub_dir
-//                        dir_add_sub_dir(parent_dir_object , curr_list_iterator->object_sn , mem_pool);
-//                    }
-//                    curr_list_iterator = listGetNext(current);//advance to the next object in the current level
-//                    curr_level_objects_count++;
-//                }
-//            }
-//            prev_list_iterator = listGetNext(previous); //advance to the next object in the previous level
-//        }
-//    }
-//}
-
 void update_parent_dir_sn(List previous , List current , int global_depth , int input_file_index ,
-                          PMemory_pool mem_pool , HashTable ht_files , HashTable ht_dirs , Dir* roots){
+                          PMemory_pool mem_pool , HashTable ht_files , HashTable ht_dirs , Dir* roots,
+                          char* curr_depth_objects_type , char* previous_depth_objects_type){
     File temp_file = NULL;
     Dir temp_dir = NULL;
-    Object_Info prev_list_iterator = NULL;
-    Object_Info curr_list_iterator = NULL;
+    ListElement prev_list_iterator = NULL;
+    ListElement curr_list_iterator = NULL;
     int curr_level_objects_count = 0 , prev_list_size = 0 , curr_list_size = 0;
+    int curr_idx = 0;
 
     if(global_depth == 0){ //We are at root Level directory just set everyone to be the children of root
         unsigned long root_sn = roots[input_file_index]->object_sn;
@@ -267,21 +196,21 @@ void update_parent_dir_sn(List previous , List current , int global_depth , int 
         dir_set_parent_dir_sn(roots[input_file_index] , root_sn);
         dir_add_sub_dir(roots[input_file_index] , root_sn , mem_pool);
 
-        LIST_FOREACH(Object_Info , iter ,current){
-            if(iter->object_type == 'F'){
-                temp_file = (File)(ht_get(ht_files , iter->object_id));
+        LIST_FOREACH(ListElement , iter , current){
+            if(curr_depth_objects_type[curr_idx] == 'F'){
+                temp_file = (File)(iter);
                 assert(temp_file);
                 file_set_parent_dir_sn(temp_file ,root_sn);
                 dir_add_file(roots[input_file_index],temp_file->object_sn , mem_pool);
 
             } else{
-                temp_dir = (Dir)(ht_get(ht_dirs , iter->object_id));
+                temp_dir = (Dir)(iter);
                 assert(temp_dir);
                 dir_set_parent_dir_sn(temp_dir , root_sn);
                 dir_add_sub_dir(roots[input_file_index],temp_dir->object_sn , mem_pool);
             }
+            curr_idx++;
         }
-
     }else{ //Go over both lists and update accordingly
         prev_list_iterator = listGetFirst(previous);
         curr_list_iterator = listGetFirst(current);
@@ -290,35 +219,57 @@ void update_parent_dir_sn(List previous , List current , int global_depth , int 
         curr_list_size = listGetSize(current);
 
         for(int i = 0 ; i < prev_list_size ; i++){ //iterate over Previous level list
-            if(prev_list_iterator->object_type == 'F'){ //A File cant be Parent directory for anyone
+            if(previous_depth_objects_type[i] == 'F'){ //A File cant be Parent directory for anyone
                 prev_list_iterator = listGetNext(previous); //advance to the next object in the previous level
                 continue;
             }else{ //The object is a directory it can be a parent
-                Dir parent_dir_object = (Dir)(ht_get(ht_dirs , prev_list_iterator->object_id));
+                Dir parent_dir_object = (Dir)(prev_list_iterator);
                 if(curr_level_objects_count >= curr_list_size){ //TODO - See if it can be return
                     prev_list_iterator = listGetNext(previous); //advance to the next object in the previous level
                     continue;
                 }
 
                 //now lets iterate over the current list while we have objects with the same parent id
-                char* parent_id = curr_list_iterator->parent_dir_id;
-                while((curr_list_iterator != NULL) && (strcmp(parent_id , curr_list_iterator->parent_dir_id) == 0)){
-                    if(curr_list_iterator->object_type == 'F'){
-                        temp_file = (File)(ht_get(ht_files , curr_list_iterator->object_id));
+                char* parent_id = NULL;
+                char* new_parent_id = NULL;
+                if(curr_depth_objects_type[curr_idx] == 'F'){
+                    temp_file = (File)(curr_list_iterator);
+                    parent_id = temp_file->parent_dir_id;
+                    new_parent_id = temp_file->parent_dir_id;
+                } else{
+                    temp_dir = ((Dir)(curr_list_iterator));
+                    parent_id = temp_dir->parent_dir_id;
+                    new_parent_id = temp_dir->parent_dir_id;
+                }
+
+                while((curr_list_iterator != NULL) && (strcmp(parent_id , new_parent_id) == 0)){
+                    if(curr_depth_objects_type[curr_idx] == 'F'){
+                        temp_file = (File)(curr_list_iterator);
                         assert(temp_file);
                         file_set_parent_dir_sn(temp_file ,parent_dir_object->object_sn);
-                        dir_add_file(parent_dir_object ,curr_list_iterator->object_sn , mem_pool); //add to the prevDir object - dir_add_file
+                        dir_add_file(parent_dir_object ,temp_file->object_sn , mem_pool); //add to the prevDir object - dir_add_file
                     } else{
-                        temp_dir = (Dir)(ht_get(ht_dirs , curr_list_iterator->object_id));
+                        temp_dir = (Dir)(curr_list_iterator);
                         assert(temp_dir);
                         dir_set_parent_dir_sn(temp_dir , parent_dir_object->object_sn);
-                        dir_add_sub_dir(parent_dir_object , curr_list_iterator->object_sn , mem_pool); //add to the prevDir object - dir_add_sub_dir
+                        dir_add_sub_dir(parent_dir_object , temp_dir->object_sn , mem_pool); //add to the prevDir object - dir_add_sub_dir
                     }
                     curr_list_iterator = listGetNext(current);//advance to the next object in the current level
                     curr_level_objects_count++;
+                    curr_idx++;
+                    if(curr_list_iterator != NULL){
+                        if(curr_depth_objects_type[curr_idx] == 'F'){
+                            temp_file = (File)(curr_list_iterator);
+                            new_parent_id = temp_file->parent_dir_id;
+                        }else{
+                            temp_dir = ((Dir)(curr_list_iterator));
+                            new_parent_id = temp_dir->parent_dir_id;
+                        }
+                    }
                 }
                 prev_list_iterator = listGetNext(previous); //advance to the next object in the previous level
             }
+
         }
     }
 }

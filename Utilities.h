@@ -35,6 +35,14 @@ typedef enum{
 #define FILE_SYSTEM_ID_LEN 3
 
 
+//Dummy Functions
+ListElement dummy_copy_func(ListElement element);
+void dummy_free_func(ListElement element);
+
+/* ****************************************************************************************************** */
+/* ****************************************************************************************************** */
+/* ****************************************************************************************************** */
+
 /*
  * copy_directory_info - returns pointer to a copy of the serial number of the directory received as input
  *
@@ -43,7 +51,6 @@ typedef enum{
 static ListElement copy_sn(ListElement element , PMemory_pool mem_pool){
     assert(element);
     unsigned long* sn = (unsigned long*)(element);
-    //unsigned long* sn_copy = malloc(sizeof(*sn_copy));
     unsigned long* sn_copy = memory_pool_alloc(mem_pool , sizeof(*sn_copy));
     if(sn_copy == NULL){
         return NULL;
@@ -58,7 +65,6 @@ static ListElement copy_sn(ListElement element , PMemory_pool mem_pool){
  * @directory_info - pointer to the serial number that should be freed
  */
 static  void free_sn(ListElement element){
-    //free(element);
     return;
 }
 
@@ -76,19 +82,8 @@ struct object_info{ //helper struct
 };
 typedef struct object_info* Object_Info;
 
-/*
- *
- */
 Object_Info object_info_create(char* id , unsigned long sn , char* parent_id , char type);
-
-/*
- *
- */
 ListElement object_info_copy(ListElement object_info);
-
-/*
- *
- */
 void object_info_destroy(ListElement object_info);
 
 
@@ -108,14 +103,7 @@ struct block_info{ //helper struct
 };
 typedef struct block_info* Block_Info;
 
-/*
- *
- */
 ListElement copy_block_info(ListElement block_info , PMemory_pool mem_pool);
-
-/*
- *
- */
 void free_block_info(ListElement block_info);
 
 /* ********************** END ********************* block_info struct ********************* END ********************* */

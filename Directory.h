@@ -24,7 +24,7 @@ struct dir_t{
     unsigned long object_sn;
     char* object_id;
     unsigned long parent_dir_sn;
-    char object_type;
+    char* parent_dir_id;
     int dir_depth;
 
     unsigned short num_of_subdirs;
@@ -48,7 +48,7 @@ typedef struct dir_t *Dir;
  * @depth  - the depth of the directory in the file system (Root is in depth 0)
  * @dir_sn - serial number of the directory
  */
-Dir dir_create(char* dir_id , unsigned int depth , unsigned long dir_sn , PMemory_pool mem_pool);
+Dir dir_create(char* dir_id , unsigned int depth , unsigned long dir_sn ,char* parent_dir_id , PMemory_pool mem_pool);
 
 /*
  * dir_set_parent_dir_sn - updates the parent serial number of the directory received as input

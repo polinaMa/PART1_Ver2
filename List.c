@@ -27,7 +27,6 @@ struct List_t {
 /* ---------- STATIC FUNCTION DECLARATIONS ------------ */
 
 static int listGetIndexOfIterator(List list);
-//static void destroyNodes(Node toDestroy, FreeListElement freeFunction);
 static void destroyNodes_NonRec(Node toDestroy, FreeListElement freeFunction);
 static Node nodeCreate(ListElement data, CopyListElement copyFunction);
 static Node nodeCreate_pool(ListElement data, CopyListElement_pool copyFunction , PMemory_pool mem_pool);
@@ -113,7 +112,6 @@ List listCopy(List list) {
     }
     return copyList;
 }
-
 
 int listGetSize(List list) {
     //Check for invalid arguments
@@ -313,9 +311,6 @@ static void destroyNodes_NonRec(Node toDestroy, FreeListElement freeFunction) {
         free(current);
         current = next;
     }
-    //destroyNodes(toDestroy->next, freeFunction);
-    //freeFunction(toDestroy->data);
-    //free(toDestroy);
 }
 
 /* @param data - the data to add to the node

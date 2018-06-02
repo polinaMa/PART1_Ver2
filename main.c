@@ -4,6 +4,8 @@
 #include "TextParsing.h"
 #include <time.h>
 
+#define OBJECT_DEPTH_ARRAY_SIZE 2000000
+
 /* ************************************************ Global Params *************************************************** */
 /* Serial number for counting the elements which insert to the system */
 // files_sn is the logical sn-number
@@ -19,6 +21,7 @@ char dedup_type;
 /* ********************************************************************************************************************/
 /* ***************************************************** MAIN ******************************************************* */
 int main(int argc , char** argv){
+    // Allocate Initial Memory Pool
     PMemory_pool mem_pool = calloc(1 , sizeof(Memory_pool));
     memory_pool_init(mem_pool);
 
@@ -34,24 +37,19 @@ int main(int argc , char** argv){
         printf("No Extra Command Line Argument Passed Other Than Program Name\n");
         return 0;
     }
-
     dedup_type = argv[1][0];
     printf("%c\n" , dedup_type);
-
     num_input_files = atoi(argv[2]);
     printf("%d\n" , num_input_files);
-
     current_working_directory = (char*)memory_pool_alloc(mem_pool , (strlen(argv[3]) + 1)*sizeof(char));
     strcpy(current_working_directory , argv[3]);
     printf("%s\n" , current_working_directory);
-
     /* Read the rest of the line to get all file names */
     files_to_read = (char**)memory_pool_alloc(mem_pool , (num_input_files * sizeof(char*)));
     for(int i = 0 ; i < num_input_files ; i++){
         files_to_read[i] = (char*)memory_pool_alloc(mem_pool,(strlen(argv[4 + i]) + 1) * sizeof(char));
         strcpy(files_to_read[i] , argv[4 + i]);
     }
-
     roots = memory_pool_alloc(mem_pool, num_input_files* sizeof(*roots));
 
     // File  Manipulation Variables
@@ -77,9 +75,14 @@ int main(int argc , char** argv){
 
     /* Define parameters for global data Manipulation (over entire input file) */
     List curr_depth_objects = NULL , previous_depth_objects = NULL;
+    int curr_depth_objects_counter = 0 , curr_previous_depth_objects = 0;
     int global_current_depth = 0 ;
-    curr_depth_objects = listCreate(object_info_copy , object_info_destroy);
-    previous_depth_objects = listCreate(object_info_copy , object_info_destroy);
+    curr_depth_objects = listCreate(dummy_copy_func , dummy_free_func);
+    previous_depth_objects = listCreate(dummy_copy_func , dummy_free_func);
+    char* curr_depth_objects_type = calloc(OBJECT_DEPTH_ARRAY_SIZE , sizeof(char));
+    char* previous_depth_objects_type = calloc(OBJECT_DEPTH_ARRAY_SIZE , sizeof(char));
+    assert(curr_depth_objects_type);
+    assert(previous_depth_objects_type);
 
     /* Define parameters for reading data regarding SINGLE OBJECT */
     char file_system_ID[FILE_SYSTEM_ID_LEN+2];
@@ -92,6 +95,10 @@ int main(int argc , char** argv){
     bool file_was_created = false;
     bool object_exists_in_hash_already = false;
     bool set_root = false;
+
+
+    Dir current_dir_object = NULL;
+    File current_file_object = NULL;
 
     /* ----------------------- Parameters Declarations & Initialization ----------------------- */
     /* ---------------------------------------------------------------------------------------- */
@@ -162,11 +169,15 @@ int main(int argc , char** argv){
                         if(depth > global_current_depth){
                             //This means we have reached a new depth and can update parent_dir_sn for objects from previous levels
                             update_parent_dir_sn(previous_depth_objects , curr_depth_objects , global_current_depth ,
-                                                 i , mem_pool , ht_files , ht_dirs , roots);
+                                                 i , mem_pool , ht_files , ht_dirs , roots,
+                                                 curr_depth_objects_type , previous_depth_objects_type);
                             //Update Object lists
                             listDestroy(previous_depth_objects); //Empty the previous_depth_objects list
                             previous_depth_objects = listCopy(curr_depth_objects);//Copy the curr_depth_objects list to the previous_depth_objects
+                            memcpy(previous_depth_objects_type , curr_depth_objects_type ,sizeof(char)*OBJECT_DEPTH_ARRAY_SIZE);
                             listClear(curr_depth_objects); //Empty the curr_depth_objects list
+                            memset(curr_depth_objects_type, 0 , sizeof(char)*OBJECT_DEPTH_ARRAY_SIZE);
+                            curr_depth_objects_counter = 0;
                             global_current_depth = depth;
                         }
                         break;
@@ -192,32 +203,38 @@ int main(int argc , char** argv){
                                 strcpy(root_id , file_system_ID);
                                 strcat(root_id , "root");
                                 root_id[8] = '\0';
-                                roots[i] = ht_set(ht_dirs , root_id , -1 , dir_sn ,DIR_SIZE , 'D' , &object_exists_in_hash_already , 0 , dedup_type , mem_pool);
+                                roots[i] = ht_set(ht_dirs , root_id , -1 , dir_sn ,DIR_SIZE , 'D' , &object_exists_in_hash_already , 0 , dedup_type , parent_dir_id ,mem_pool);
+                                current_dir_object = roots[i];
                                 dir_sn++;
                                 free(root_id);
                                 set_root = false;
                             }
                             //Create Directory Object with the retrieved data
-                            ht_set(ht_dirs, object_id, depth, dir_sn, DIR_SIZE , 'D' , &object_exists_in_hash_already , 0, dedup_type , mem_pool);
+                            current_dir_object = ht_set(ht_dirs, object_id, depth, dir_sn, DIR_SIZE , 'D' , &object_exists_in_hash_already , 0, dedup_type , parent_dir_id , mem_pool);
                             dir_sn++;
                         }
                         break;
                     case 13: /* Line 13 is SV */
-                        case_13_VS(input_file , buff , &block_line_count ,
+                        current_file_object = case_13_VS(input_file , buff , &block_line_count ,
                                    &read_empty_line_chucnks , depth , object_id,file_size,
                                    &file_was_created, &finished_process_blocks , mem_pool,dedup_type,
                                    ht_files , ht_blocks, ht_physical_files,
-                                   &files_sn , &physical_files_sn, &blocks_sn);
+                                   &files_sn , &physical_files_sn, &blocks_sn, parent_dir_id);
                         // Add object (File or Directory) to curr_depth_objects list
                         if ((obj_type == 'F') && (is_zero_size_file == false) && (file_was_created == true)){
-                            Object_Info oi_file = object_info_create(object_id , (files_sn - 1) , parent_dir_id , 'F');
-                            listInsertLast(curr_depth_objects , oi_file);
-                            object_info_destroy(oi_file); //The list adds a copy of this object and it is no longer needed
+                            if(current_file_object != NULL){
+                                listInsertLast(curr_depth_objects , current_file_object);
+                                curr_depth_objects_type[curr_depth_objects_counter] = 'F';
+                                curr_depth_objects_counter++;
+                                assert(!(curr_depth_objects_counter > OBJECT_DEPTH_ARRAY_SIZE));
+                            }
+                            //object_info_destroy(oi_file); //The list adds a copy of this object and it is no longer needed
                         } else if(obj_type == 'D'){ //Adding Directory Object to HashTable
                             //add directory to curr_depth_objects list in order to later find the parent directory
-                            Object_Info oi_dir = object_info_create(object_id , (dir_sn - 1) , parent_dir_id , 'D');
-                            listInsertLast(curr_depth_objects , oi_dir);
-                            object_info_destroy(oi_dir); //The list adds a copy of this object and it is no longer needed
+                            listInsertLast(curr_depth_objects , current_dir_object);
+                            curr_depth_objects_type[curr_depth_objects_counter] = 'D';
+                            curr_depth_objects_counter++;
+                            assert(!(curr_depth_objects_counter > OBJECT_DEPTH_ARRAY_SIZE));
                         }
                         break;
                     default:
@@ -256,11 +273,15 @@ int main(int argc , char** argv){
         fflush(monitor_file);
         //This means we have reached a new depth and can update parent_dir_sn for objects from previous levels
         update_parent_dir_sn(previous_depth_objects , curr_depth_objects , global_current_depth ,
-                             i , mem_pool , ht_files , ht_dirs , roots);
+                             i , mem_pool , ht_files , ht_dirs , roots,
+                             curr_depth_objects_type , previous_depth_objects_type);
         if(finished_reading_file == true){
             global_current_depth = 0;
             listClear(curr_depth_objects); //Empty the curr_depth_objects list
+            memset(curr_depth_objects_type, 0 , sizeof(char)*OBJECT_DEPTH_ARRAY_SIZE);
             listClear(previous_depth_objects); //Empty the curr_depth_objects list
+            memset(previous_depth_objects_type, 0 , sizeof(char)*OBJECT_DEPTH_ARRAY_SIZE);
+            curr_depth_objects_counter = 0;
             block_line_count = 0; /* Zero the line count for the next block */
             read_empty_line_chucnks = false;
             is_zero_size_file = false;
@@ -282,6 +303,8 @@ int main(int argc , char** argv){
     //Free All Hash tables and Lists
     listDestroy(previous_depth_objects);
     listDestroy(curr_depth_objects);
+    free(curr_depth_objects_type);
+    free(previous_depth_objects_type);
     fclose(monitor_file);
     memory_pool_destroy(mem_pool);
     free(mem_pool);
