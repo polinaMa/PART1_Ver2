@@ -18,11 +18,11 @@
  *                  - files_list -> list of hashed file ids containing this block
  */
 struct block_t{
-    unsigned long block_sn; // running index
-    char* block_id; // Hashed
+    unsigned long block_sn;
+    char* block_id;
     unsigned int block_size;
     unsigned int shared_by_num_files;
-    HashTableF files_ht;
+    HashTableF files_ht; // Hash Table of size 17
 };
 typedef struct block_t *Block;
 
