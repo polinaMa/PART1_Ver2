@@ -109,15 +109,14 @@ File case_13_VS(FILE *input_file , char buff[BUFFER_SIZE] , int* block_line_coun
  * @previous         - List of descriptors of files and directories from previous level
  * @current          - List of descriptors of files and directories from current level
  * @global_depth     - the depth currently being processed
- * @input_file_index - index of the currently processed input file in order to find the correct root object
+ * @curr_root_index  - index of the currently processed input file in order to find the correct root object
  * @mem_pool         - pointer to memory pool structure
  * @ht_files         - Pointer to hash table of logical file objects
  * @ht_dirs          - Pointer to hash table of directory objects
  * @roots            - Pointer to array of root directories
  */
-void update_parent_dir_sn(List previous , List current , int global_depth , int input_file_index ,
-                          PMemory_pool mem_pool , HashTable ht_files , HashTable ht_dirs , Dir* roots,
-                          char* curr_depth_objects_type , char* previous_depth_objects_type);
+void update_parent_dir_sn(List previous , List current , int global_depth , int curr_root_index ,
+                          PMemory_pool mem_pool , Dir* roots, char* curr_depth_objects_type , char* previous_depth_objects_type);
 
 /*
  * print_ht_to_CSV - Print into a csv file that starts with "Parsing_Results.." the data about
@@ -136,7 +135,7 @@ void update_parent_dir_sn(List previous , List current , int global_depth , int 
  */
 void print_ht_to_CSV(char dedup_type , char** files_to_read, int num_of_input_files ,
                      unsigned long blocks_sn, unsigned long files_sn, unsigned long dir_sn , unsigned long physical_files_sn,
-                     HashTable ht_files , HashTable ht_blocks, HashTable ht_dirs, HashTable ht_physical_files);
+                     HashTable ht_files , HashTable ht_blocks, HashTable ht_dirs, HashTable ht_physical_files , char* srv_idx_first, char* srv_idx_last);
 
 
 #endif //DEDUPLICATIONPROJECT_TEXTPARSING_H

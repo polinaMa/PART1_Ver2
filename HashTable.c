@@ -118,7 +118,7 @@ Data ht_set(HashTable ht, char *key, unsigned int depth , unsigned long sn , uns
         //Return the pointer to the Block/File that already exists in the hash
         *object_exists = true;
         return next->data;
-    } else { /* Nope, could't find it.  Time to grow a pair. */
+    } else { /* Nope, couldn't find it.  Time to grow a pair. */
         newpair = ht_newpair(key, depth , sn, size, flag , physical_sn , dedup_type , parent_dir_id , mem_pool); //allocate new pair
         if(newpair == NULL){
             return NULL;
@@ -170,7 +170,7 @@ Data file_compare(HashTable ht_files , HashTable ht_physical_files ,
 
     /* ---------------------------------- Iterate over HT_PHYSICAL_FILES ---------------------------------- */
     File temp_file = NULL;
-    Entry current = ht_physical_files->table[hash_key]; //get the cell in the hashtable for the possible file
+    Entry current = ht_physical_files->table[hash_key]; //get the cell in the hash table for the possible file
     while(current != NULL && current->key != NULL){ //go over all files in the cell found above
         temp_file = ((File)(current->data));
         if(strcmp(file->object_id , temp_file->object_id) == 0){ //It's the same file
@@ -239,7 +239,7 @@ Data file_compare(HashTable ht_files , HashTable ht_physical_files ,
     long int hash_key_f = ht_hash( ht_files , file->object_id );
     Entry curr = ht_files->table[hash_key_f];
 
-    //Just add the logical file to the hashtable of logical files
+    //Just add the logical file to the hash table of logical files
     Entry newpair_l  = memory_pool_alloc(mem_pool , sizeof(*newpair_l));
     if(newpair_l == NULL){
         return NULL;

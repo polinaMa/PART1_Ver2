@@ -135,7 +135,7 @@ File case_13_VS(FILE *input_file , char buff[BUFFER_SIZE] , int* block_line_coun
     (*physical_files_sn)++;
 
     *file_was_created = true;
-    object_exists = false;
+    object_exists = false; //TODO Rename to Block Exists
 
     /* Read all data chunks  - Add Block Objects to hashtable*/
     if ((int)(buff[0]) != LINE_SPACE) {
@@ -180,9 +180,8 @@ File case_13_VS(FILE *input_file , char buff[BUFFER_SIZE] , int* block_line_coun
     return file_obj;
 }
 
-void update_parent_dir_sn(List previous , List current , int global_depth , int input_file_index ,
-                          PMemory_pool mem_pool , HashTable ht_files , HashTable ht_dirs , Dir* roots,
-                          char* curr_depth_objects_type , char* previous_depth_objects_type){
+void update_parent_dir_sn(List previous , List current , int global_depth , int curr_root_index ,
+                          PMemory_pool mem_pool , Dir* roots, char* curr_depth_objects_type , char* previous_depth_objects_type){
     File temp_file = NULL;
     Dir temp_dir = NULL;
     ListElement prev_list_iterator = NULL;
@@ -191,23 +190,23 @@ void update_parent_dir_sn(List previous , List current , int global_depth , int 
     int curr_idx = 0;
 
     if(global_depth == 0){ //We are at root Level directory just set everyone to be the children of root
-        unsigned long root_sn = roots[input_file_index]->object_sn;
+        unsigned long root_sn = roots[curr_root_index]->object_sn;
         //Set root to be its own child
-        dir_set_parent_dir_sn(roots[input_file_index] , root_sn);
-        dir_add_sub_dir(roots[input_file_index] , root_sn , mem_pool);
+        dir_set_parent_dir_sn(roots[curr_root_index] , root_sn);
+        dir_add_sub_dir(roots[curr_root_index] , root_sn , mem_pool);
 
         LIST_FOREACH(ListElement , iter , current){
             if(curr_depth_objects_type[curr_idx] == 'F'){
                 temp_file = (File)(iter);
                 assert(temp_file);
                 file_set_parent_dir_sn(temp_file ,root_sn);
-                dir_add_file(roots[input_file_index],temp_file->object_sn , mem_pool);
+                dir_add_file(roots[curr_root_index],temp_file->object_sn , mem_pool);
 
             } else{
                 temp_dir = (Dir)(iter);
                 assert(temp_dir);
                 dir_set_parent_dir_sn(temp_dir , root_sn);
-                dir_add_sub_dir(roots[input_file_index],temp_dir->object_sn , mem_pool);
+                dir_add_sub_dir(roots[curr_root_index],temp_dir->object_sn , mem_pool);
             }
             curr_idx++;
         }
@@ -277,29 +276,23 @@ void update_parent_dir_sn(List previous , List current , int global_depth , int 
 /* *********************************************** Parsing Functions ************************************************ */
 void print_ht_to_CSV(char dedup_type , char** files_to_read, int num_of_input_files ,
                      unsigned long blocks_sn, unsigned long files_sn, unsigned long dir_sn , unsigned long physical_files_sn,
-                     HashTable ht_files , HashTable ht_blocks, HashTable ht_dirs, HashTable ht_physical_files){
+                     HashTable ht_files , HashTable ht_blocks, HashTable ht_dirs, HashTable ht_physical_files , char* srv_idx_first, char* srv_idx_last){
     Entry pair = NULL;
     File temp_file = NULL;
     Block temp_block = NULL;
     Dir temp_dir = NULL;
     FILE *results_file = NULL;
     char* fileName = malloc(350*sizeof(char));
-    fileName = strcpy(fileName , "Parsing_Results_");
 
-    for(int i = 0 ; i < num_of_input_files ; i++){
-        char file_proc[5];
-        strncpy(file_proc , files_to_read[i] , 4);
-        file_proc[4] = '\0';
-        fileName = strcat(fileName, file_proc);
-        if(i < (num_of_input_files -1)){
-            fileName = strcat(fileName , "_");
-        }
-    }
     if( dedup_type == 'B'){
-        fileName = strcat(fileName , "_B.csv");
+        fileName = strcpy(fileName , "B_dedup_");
+
     } else {
-        fileName = strcat(fileName , "_F.csv");
+        fileName = strcpy(fileName , "P_dedup_");
     }
+    char temp_idxs[15];
+    sprintf(temp_idxs , "%c%c%c_%c%c%c.csv" , srv_idx_first[0],srv_idx_first[1],  srv_idx_first[2] , srv_idx_last[0] , srv_idx_last[1] , srv_idx_last[2]);
+    fileName = strcat(fileName , temp_idxs);
 
     // Open the output file
     results_file = fopen(fileName , "w+");

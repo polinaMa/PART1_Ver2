@@ -2,6 +2,27 @@
 // Created by Polina on 12-Mar-18.
 //
 #include "File.h"
+
+/*
+ * copy_sn - dummy function for memory pool use compatibility
+ */
+static ListElement copy_sn(ListElement element , PMemory_pool mem_pool){
+    assert(element);
+    unsigned long* sn = (unsigned long*)(element);
+    unsigned long* sn_copy = memory_pool_alloc(mem_pool , sizeof(*sn_copy));
+    if(sn_copy == NULL){
+        return NULL;
+    }
+    *sn_copy = *sn;
+    return sn_copy;
+}
+
+/*
+ * free_sn - dummy function for memory pool use compatibility
+ */
+static void free_sn(ListElement element){
+    return;
+}
 /* ******************* START ******************* File STRUCT Functions ******************* START ******************** */
 File file_create(char* file_id , unsigned int depth , unsigned long file_sn , unsigned int size ,
                  unsigned long physical_sn , char dedup_type ,char* parent_dir_id , PMemory_pool mem_pool){

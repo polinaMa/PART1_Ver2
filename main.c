@@ -2,9 +2,6 @@
 #include "Utilities.h"
 #include "HashTable.h"
 #include "TextParsing.h"
-#include <time.h>
-
-#define OBJECT_DEPTH_ARRAY_SIZE 2000000
 
 /* ************************************************ Global Params *************************************************** */
 /* Serial number for counting the elements which insert to the system */
@@ -25,25 +22,22 @@ int main(int argc , char** argv){
     PMemory_pool mem_pool = calloc(1 , sizeof(Memory_pool));
     memory_pool_init(mem_pool);
 
-    FILE* monitor_file = fopen("Monitor.txt" , "w+");
-    time_t rawtime;
-    struct tm *timeinfo;
     /* ----------------------- Parameters Declarations & Initialization ----------------------- */
     /* Define Files to be read */
     int num_input_files = 0;
     char* current_working_directory = NULL;
     char** files_to_read = NULL;
+    char srv_idx_first[FILE_SYSTEM_ID_LEN+2];
+    char srv_idx_last[FILE_SYSTEM_ID_LEN+2];
+
     if(argc == 1){
         printf("No Extra Command Line Argument Passed Other Than Program Name\n");
         return 0;
     }
     dedup_type = argv[1][0];
-    printf("%c\n" , dedup_type);
     num_input_files = atoi(argv[2]);
-    printf("%d\n" , num_input_files);
     current_working_directory = (char*)memory_pool_alloc(mem_pool , (strlen(argv[3]) + 1)*sizeof(char));
     strcpy(current_working_directory , argv[3]);
-    printf("%s\n" , current_working_directory);
     /* Read the rest of the line to get all file names */
     files_to_read = (char**)memory_pool_alloc(mem_pool , (num_input_files * sizeof(char*)));
     for(int i = 0 ; i < num_input_files ; i++){
@@ -75,7 +69,7 @@ int main(int argc , char** argv){
 
     /* Define parameters for global data Manipulation (over entire input file) */
     List curr_depth_objects = NULL , previous_depth_objects = NULL;
-    int curr_depth_objects_counter = 0 , curr_previous_depth_objects = 0;
+    int curr_depth_objects_counter = 0;
     int global_current_depth = 0 ;
     curr_depth_objects = listCreate(dummy_copy_func , dummy_free_func);
     previous_depth_objects = listCreate(dummy_copy_func , dummy_free_func);
@@ -108,20 +102,13 @@ int main(int argc , char** argv){
         current_file = calloc((strlen(current_working_directory) + strlen(files_to_read[i]) + 1) , sizeof(char)); //Temporary Allocation - Do not allocate in POOL !!!!!
         strcpy(current_file , current_working_directory);
         strcat(current_file , files_to_read[i]);
-        fprintf(monitor_file, "(Parser)--> ----- Opening File %s ----- \n" , current_file);
-        printf("(Parser)--> ----- Opening File %s ----- \n" , current_file);
-        time(&rawtime);
-        timeinfo = localtime(&rawtime);
-        fprintf(monitor_file, "(Parser)-->              %s             \n" , asctime (timeinfo));
-        fflush(monitor_file);
         input_file = fopen(current_file , "r");
         if(input_file == NULL){ //check the file was opened successfully - if not terminate
             printf("(Parser)--> Can't open input file/s =[ \n");
             return 0;
         }
         free(current_file);
-        fprintf(monitor_file, "(Parser)-->  ----- Start Reading the file ----- \n");
-        printf("(Parser)-->  ----- Start Reading the file ----- \n");
+
         fgets(buff, BUFFER_SIZE , input_file); //Read First Line
         clear_line(buff);
         fgets(buff, BUFFER_SIZE , input_file); //Read Second Line
@@ -131,6 +118,22 @@ int main(int argc , char** argv){
         strncpy(file_system_ID , buff + 9 , 3);
         file_system_ID[FILE_SYSTEM_ID_LEN]='_';
         file_system_ID[FILE_SYSTEM_ID_LEN + 1]='\0';
+        int dec_idx;
+        char temp_id[FILE_SYSTEM_ID_LEN + 1];
+        if(i == 0){
+            strncpy(temp_id , buff + 9 , 3);
+            temp_id[FILE_SYSTEM_ID_LEN] = '\0';
+            //convert to decimal
+            dec_idx = (int)strtol(temp_id , NULL , 16);
+            sprintf(srv_idx_first , "%03d",dec_idx);
+        }
+        if(i == num_input_files - 1){
+            strncpy(temp_id , buff + 9 , 3);
+            temp_id[FILE_SYSTEM_ID_LEN] = '\0';
+            // convert to decimal
+            dec_idx = (int)strtol(temp_id , NULL , 16);
+            sprintf(srv_idx_last , "%03d",dec_idx);
+        }
 
         /* Skip till the first empty line - over the file system description */
         do{
@@ -139,8 +142,6 @@ int main(int argc , char** argv){
         } while(strlen(buff) > 1);
 
         set_root = true;
-        fprintf(monitor_file, "(Parser)--> --- Skipped over the file-system data block successfully--- \n");
-        printf("(Parser)--> --- Skipped over the file-system data block successfully--- \n");
 
         /* Read File till the end - parse each block and add it to the corresponding structure */
         while(!feof(input_file)){
@@ -160,16 +161,16 @@ int main(int argc , char** argv){
             /***********************************************************************************************/
             while (strlen(buff) > 1 && !feof(input_file)){ /* Processing Object */
                 switch(block_line_count){
-                    case 1: /* DIRECTORY NAME */
+                    case 1: /* get DIRECTORY NAME */
                         parent_dir_id = case_1_directory_name(buff);
                         break;
-                    case 4: /* NAMESPACE DEPTH */
+                    case 4: /* get NAMESPACE DEPTH */
                         depth = case_4_get_depth(buff);
                         //Check if current depth (in variable depth) is bigger than the one in global_current_depth
                         if(depth > global_current_depth){
                             //This means we have reached a new depth and can update parent_dir_sn for objects from previous levels
                             update_parent_dir_sn(previous_depth_objects , curr_depth_objects , global_current_depth ,
-                                                 i , mem_pool , ht_files , ht_dirs , roots,
+                                                 i , mem_pool , roots,
                                                  curr_depth_objects_type , previous_depth_objects_type);
                             //Update Object lists
                             listDestroy(previous_depth_objects); //Empty the previous_depth_objects list
@@ -181,16 +182,16 @@ int main(int argc , char** argv){
                             global_current_depth = depth;
                         }
                         break;
-                    case 5: /* FILE SIZE */
+                    case 5: /* get FILE SIZE */
                         file_size = case_5_file_size(buff);
                         break;
-                    case 6: /* FILE ATTRIBUTES VALUE */
+                    case 6: /* get FILE ATTRIBUTES VALUE */
                         obj_type = case_6_file_attribute(buff);
                         if( ( file_size == 0 ) && ( obj_type == 'F' ) ){ // ignore zero size files
                             is_zero_size_file = true;
                         }
                         break;
-                    case 7: /* FILE ID */
+                    case 7: /* get OBJECT ID */
                         object_id = case_7_hash_file_id(buff , file_system_ID);
                         //Adding Directory Object to HashTable
                         if(obj_type == 'D'){
@@ -216,10 +217,10 @@ int main(int argc , char** argv){
                         break;
                     case 13: /* Line 13 is SV */
                         current_file_object = case_13_VS(input_file , buff , &block_line_count ,
-                                   &read_empty_line_chucnks , depth , object_id,file_size,
-                                   &file_was_created, &finished_process_blocks , mem_pool,dedup_type,
-                                   ht_files , ht_blocks, ht_physical_files,
-                                   &files_sn , &physical_files_sn, &blocks_sn, parent_dir_id);
+                                                         &read_empty_line_chucnks , depth , object_id,file_size,
+                                                         &file_was_created, &finished_process_blocks , mem_pool,dedup_type,
+                                                         ht_files , ht_blocks, ht_physical_files,
+                                                         &files_sn , &physical_files_sn, &blocks_sn, parent_dir_id);
                         // Add object (File or Directory) to curr_depth_objects list
                         if ((obj_type == 'F') && (is_zero_size_file == false) && (file_was_created == true)){
                             if(current_file_object != NULL){
@@ -266,15 +267,9 @@ int main(int argc , char** argv){
         fclose(input_file);
         free(parent_dir_id);
 
-        fprintf(monitor_file, "(Parser) --> --- Finished reading the input file ---\n");
-        time(&rawtime);
-        timeinfo = localtime(&rawtime);
-        fprintf(monitor_file, "(Parser)-->              %s             \n" , asctime (timeinfo));
-        fflush(monitor_file);
         //This means we have reached a new depth and can update parent_dir_sn for objects from previous levels
         update_parent_dir_sn(previous_depth_objects , curr_depth_objects , global_current_depth ,
-                             i , mem_pool , ht_files , ht_dirs , roots,
-                             curr_depth_objects_type , previous_depth_objects_type);
+                             i , mem_pool , roots, curr_depth_objects_type , previous_depth_objects_type);
         if(finished_reading_file == true){
             global_current_depth = 0;
             listClear(curr_depth_objects); //Empty the curr_depth_objects list
@@ -291,22 +286,18 @@ int main(int argc , char** argv){
             finished_reading_file = false;
         }
     } /* (1) Read an Input File */
-    printf("Creating CSV .... \n");
-    fprintf(monitor_file, "(Parser) --> --- Creating CSV .... ---\n");
-    fflush(monitor_file);
+
     print_ht_to_CSV(dedup_type, files_to_read , num_input_files,
                     blocks_sn, files_sn, dir_sn, physical_files_sn,
-                    ht_files, ht_blocks, ht_dirs, ht_physical_files);
-    printf("Freeing up Memory .... \n");
-    fprintf(monitor_file, "(Parser) --> --- Freeing up Memory ....  ---\n");
-    fflush(monitor_file);
+                    ht_files, ht_blocks, ht_dirs, ht_physical_files, srv_idx_first, srv_idx_last);
+
     //Free All Hash tables and Lists
     listDestroy(previous_depth_objects);
     listDestroy(curr_depth_objects);
     free(curr_depth_objects_type);
     free(previous_depth_objects_type);
-    fclose(monitor_file);
     memory_pool_destroy(mem_pool);
     free(mem_pool);
+
     return 0;
 }

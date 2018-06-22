@@ -33,41 +33,11 @@ typedef enum{
 #define FILE_ATTRIBUTE_DIRECTORY 0x00000010
 #define ROOT_ID_LEN 10
 #define FILE_SYSTEM_ID_LEN 3
-
+#define OBJECT_DEPTH_ARRAY_SIZE 2000000
 
 //Dummy Functions
 ListElement dummy_copy_func(ListElement element);
 void dummy_free_func(ListElement element);
-
-/* ****************************************************************************************************** */
-/* ****************************************************************************************************** */
-/* ****************************************************************************************************** */
-
-/*
- * copy_directory_info - returns pointer to a copy of the serial number of the directory received as input
- *
- * @directory_info - pointer to the serial number of the directory to be copied
- */
-static ListElement copy_sn(ListElement element , PMemory_pool mem_pool){
-    assert(element);
-    unsigned long* sn = (unsigned long*)(element);
-    unsigned long* sn_copy = memory_pool_alloc(mem_pool , sizeof(*sn_copy));
-    if(sn_copy == NULL){
-        return NULL;
-    }
-    *sn_copy = *sn;
-    return sn_copy;
-}
-
-/*
- * free_dir_info - frees the allocated space to the serial number of a directory
- *
- * @directory_info - pointer to the serial number that should be freed
- */
-static  void free_sn(ListElement element){
-    return;
-}
-
 /* ******************** START ******************** object_info struct ******************** START ******************** */
 
 /*

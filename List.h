@@ -38,9 +38,6 @@
 *                              return it.
 *   listGetNext              - Advances the list's iterator to the next element
 *                              and return it
-*   listSort                 - Sorts the list according to a given criteria
-*   listFilter               - Creates a copy of an existing list, filtered by
-*                              a boolean predicate
 *   listClear		      	  - Clears all the data from the list
 */
 
