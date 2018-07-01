@@ -107,9 +107,9 @@ void hashTable_destroy(HashTable ht , char flag ,  char dedup_type);
  *                         returns false if physical file already exists
  *                         returns true if no physical file exists
  */
-Data file_compare(HashTable ht_files , HashTable ht_physical_files ,
-                  File file , File file_obj_p, unsigned long* physical_files_sn,
-                  char dedup_type , PMemory_pool mem_pool);
+Data check_physical_file_exists(HashTable ht_files, HashTable ht_physical_files,
+                                File file, File file_obj_p, unsigned long *physical_files_sn,
+                                char dedup_type, PMemory_pool mem_pool);
 
 /* ********************* END ********************* HashTable Functions ********************* END ******************** */
 

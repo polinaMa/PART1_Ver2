@@ -53,7 +53,7 @@ File file_create(char* file_id , unsigned int depth , unsigned long file_sn , un
     file->file_size = size;
     file->num_files = 1;
     file->flag = 'P';
-    file->physical_sn = physical_sn; // will be updated from file_compare
+    file->physical_sn = physical_sn; // will be updated from check_physical_file_exists
 
     file->blocks_list = listCreate_pool(copy_block_info , free_block_info , mem_pool);
     if(file->blocks_list == NULL){

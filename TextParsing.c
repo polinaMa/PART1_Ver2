@@ -85,14 +85,14 @@ char* case_7_hash_file_id(char buff[BUFFER_SIZE], char* file_system_id){
 
 /* Line 13 is SV */
 // returns true if a file was created
-File case_13_VS(FILE *input_file , char buff[BUFFER_SIZE] , int* block_line_count ,
+File case_13_VS(FILE *input_file , char buff[BUFFER_SIZE] , int* chunk_line_count ,
                 bool* read_empty_line_chucnks ,unsigned short depth, char* object_id,
                 unsigned int file_size , bool* file_was_created, bool* finished_process_blocks ,
                 PMemory_pool mem_pool,char dedup_type,
                 HashTable ht_files , HashTable ht_blocks, HashTable ht_physical_files,
                 unsigned long *files_sn , unsigned long *physical_files_sn, unsigned long *blocks_sn , char* parent_dir_id) {
     bool read_block = false;   // Params initialization
-    bool object_exists = false;
+    bool block_exists = false;
     *read_empty_line_chucnks = false;
     char block_id[BLOCK_ID_LEN];
     unsigned int block_size = 0;
@@ -116,7 +116,7 @@ File case_13_VS(FILE *input_file , char buff[BUFFER_SIZE] , int* block_line_coun
         if((*read_empty_line_chucnks != true)&&(read_block != true)){
             fgets(buff, BUFFER_SIZE, input_file);
             clear_line(buff);
-            (*block_line_count)++;
+            (*chunk_line_count)++;
         }
     }
     if (*read_empty_line_chucnks == true) {
@@ -126,7 +126,7 @@ File case_13_VS(FILE *input_file , char buff[BUFFER_SIZE] , int* block_line_coun
     File file_obj = NULL , file_obj_p = NULL;
     if(dedup_type == 'B'){ //Block level deduplication
         file_obj = ht_set(ht_files , object_id , depth ,*files_sn , file_size ,'F',
-                          &object_exists , *physical_files_sn,dedup_type , parent_dir_id , mem_pool);
+                          &block_exists , *physical_files_sn,dedup_type , parent_dir_id , mem_pool);
     } else { // File level deduplication
         file_obj = file_create(object_id , depth , *files_sn , file_size , *physical_files_sn , dedup_type , parent_dir_id , mem_pool);
         file_obj_p = file_create(object_id , depth , *files_sn , file_size , *physical_files_sn, dedup_type , parent_dir_id , mem_pool);
@@ -135,13 +135,12 @@ File case_13_VS(FILE *input_file , char buff[BUFFER_SIZE] , int* block_line_coun
     (*physical_files_sn)++;
 
     *file_was_created = true;
-    object_exists = false; //TODO Rename to Block Exists
+    block_exists = false;
 
     /* Read all data chunks  - Add Block Objects to hashtable*/
     if ((int)(buff[0]) != LINE_SPACE) {
         do { //we already have one chunk in the buffer
             char size[CHUNKE_SIZE_LEN] = "aaaaa";
-            block_size = 0;
             if (check_12_z(buff) == true) { //only first 12 digits are block_id
                 strncpy(block_id, buff, STR_OF_Z);
                 block_id[STR_OF_Z] = '\0';
@@ -160,22 +159,26 @@ File case_13_VS(FILE *input_file , char buff[BUFFER_SIZE] , int* block_line_coun
                 file_add_block(file_obj_p , block_id , block_size , mem_pool);
             }
 
-            new_block = ht_set(ht_blocks , block_id , 1 , *blocks_sn , block_size , 'B', &object_exists , 0 , dedup_type , parent_dir_id , mem_pool);
-            block_add_file(new_block , file_obj->object_id , mem_pool);
+            if(dedup_type == 'B'){ // For File Level deduplication there is noe need to save blocks - all needed information is in block_info in each file
+                new_block = ht_set(ht_blocks , block_id , 1 , *blocks_sn , block_size , 'B', &block_exists , 0 , dedup_type , parent_dir_id , mem_pool);
+                block_add_file(new_block , file_obj->object_id , mem_pool);
 
-            if(object_exists == false){
-                (*blocks_sn)++;
+                if(block_exists == false){
+                    (*blocks_sn)++;
+                }
             }
+
             fgets(buff, BUFFER_SIZE, input_file);
             clear_line(buff);
-            (*block_line_count)++;
-            object_exists = false;
+            (*chunk_line_count)++;
+            block_exists = false; // Reset Variable for next read line
         } while (strlen(buff) > 1);
     }
     *finished_process_blocks = true;
 
     if(dedup_type == 'F'){ // Check if physical file already exists
-        file_compare(ht_files ,ht_physical_files ,  file_obj , file_obj_p , physical_files_sn , dedup_type , mem_pool);
+        check_physical_file_exists(ht_files, ht_physical_files, file_obj, file_obj_p, physical_files_sn, dedup_type,
+                                   mem_pool);
     }
     return file_obj;
 }
@@ -223,9 +226,10 @@ void update_parent_dir_sn(List previous , List current , int global_depth , int 
                 continue;
             }else{ //The object is a directory it can be a parent
                 Dir parent_dir_object = (Dir)(prev_list_iterator);
-                if(curr_level_objects_count >= curr_list_size){ //TODO - See if it can be return
-                    prev_list_iterator = listGetNext(previous); //advance to the next object in the previous level
-                    continue;
+                if(curr_level_objects_count == curr_list_size){
+                    //prev_list_iterator = listGetNext(previous); //finish iterating over previous level object
+                    //continue;
+                    return;
                 }
 
                 //now lets iterate over the current list while we have objects with the same parent id

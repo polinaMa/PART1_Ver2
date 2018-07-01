@@ -96,7 +96,7 @@ char* case_7_hash_file_id(char buff[BUFFER_SIZE], char* file_system_id);
  * @physical_files_sn       - Pointer to serial number counter fo physical file objects
  * @blocks_sn               - Pointer to serial number counter fo block objects
  */
-File case_13_VS(FILE *input_file , char buff[BUFFER_SIZE] , int* block_line_count ,
+File case_13_VS(FILE *input_file , char buff[BUFFER_SIZE] , int* chunk_line_count ,
                 bool* read_empty_line_chucnks ,unsigned short depth, char* object_id,
                 unsigned int file_size , bool* file_was_created, bool* finished_process_blocks ,
                 PMemory_pool mem_pool,char dedup_type,

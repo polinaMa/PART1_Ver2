@@ -51,7 +51,7 @@ int main(int argc , char** argv){
     char buff[BUFFER_SIZE];
     bool read_empty_line_chucnks = false;
     bool finished_process_blocks = false;
-    int block_line_count = 0;
+    int chunk_line_count = 0;
     char* current_file = NULL;
     bool finished_reading_file = false;
 
@@ -147,7 +147,7 @@ int main(int argc , char** argv){
         while(!feof(input_file)){
             fgets(buff, BUFFER_SIZE , input_file);
             clear_line(buff);
-            block_line_count++;
+            chunk_line_count++;
             /* Check if we have reached the end of the file, nothing more to read */
             if((strcmp(buff , "LOGCOMPLETE\r\n") == 0) || (strcmp(buff , "LOGCOMPLETE\n") == 0)){
                 /* Read the last line before EOF */
@@ -160,7 +160,7 @@ int main(int argc , char** argv){
             /* Check if we haven't reached the end of the current input block */
             /***********************************************************************************************/
             while (strlen(buff) > 1 && !feof(input_file)){ /* Processing Object */
-                switch(block_line_count){
+                switch(chunk_line_count){
                     case 1: /* get DIRECTORY NAME */
                         parent_dir_id = case_1_directory_name(buff);
                         break;
@@ -216,7 +216,7 @@ int main(int argc , char** argv){
                         }
                         break;
                     case 13: /* Line 13 is SV */
-                        current_file_object = case_13_VS(input_file , buff , &block_line_count ,
+                        current_file_object = case_13_VS(input_file , buff , &chunk_line_count ,
                                                          &read_empty_line_chucnks , depth , object_id,file_size,
                                                          &file_was_created, &finished_process_blocks , mem_pool,dedup_type,
                                                          ht_files , ht_blocks, ht_physical_files,
@@ -245,14 +245,14 @@ int main(int argc , char** argv){
                 if(read_empty_line_chucnks == false && finished_process_blocks == false){
                     fgets(buff, BUFFER_SIZE , input_file); //read next line in current block
                     clear_line(buff);
-                    block_line_count++;
+                    chunk_line_count++;
                 }
             } /* Processing Object */
 
             /***********************************************************************************************/
             /******************* WE HAVE REACHED THE END OF THE CURRENT INPUT OBJECT !!! ********************/
             if(!feof(input_file)){ //Update parameters that are relevant to a single object
-                block_line_count = 0; /* Zero the line count for the next block */
+                chunk_line_count = 0; /* Zero the line count for the next block */
                 read_empty_line_chucnks = false;
                 is_zero_size_file = false;
                 free(parent_dir_id); //stays with regular malloc
@@ -277,7 +277,7 @@ int main(int argc , char** argv){
             listClear(previous_depth_objects); //Empty the curr_depth_objects list
             memset(previous_depth_objects_type, 0 , sizeof(char)*OBJECT_DEPTH_ARRAY_SIZE);
             curr_depth_objects_counter = 0;
-            block_line_count = 0; /* Zero the line count for the next block */
+            chunk_line_count = 0; /* Zero the line count for the next block */
             read_empty_line_chucnks = false;
             is_zero_size_file = false;
             file_was_created = false;

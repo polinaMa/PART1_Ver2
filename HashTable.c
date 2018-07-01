@@ -159,9 +159,9 @@ Data ht_get(HashTable ht, char *key ) {
     return pair->data;
 }
 
-Data file_compare(HashTable ht_files , HashTable ht_physical_files ,
-                  File file , File file_obj_p, unsigned long* physical_files_sn,
-                  char dedup_type , PMemory_pool mem_pool){
+Data check_physical_file_exists(HashTable ht_files, HashTable ht_physical_files,
+                                File file, File file_obj_p, unsigned long *physical_files_sn,
+                                char dedup_type, PMemory_pool mem_pool){
     assert(file && file_obj_p);
     bool physical_file_exist = false , blocks_differ = false;
     Block_Info first_block = (Block_Info)listGetFirst(file->blocks_list);
