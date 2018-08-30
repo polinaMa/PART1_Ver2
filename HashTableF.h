@@ -18,14 +18,13 @@
 
 #define INIT_SIZE 25
 #define BLOCKS_IN_FILE_SIZE 17
-#define BLOCKS_IN_FILE_SIZE_Z 77
-typedef void* DataF;
+
 /* **************************************************** DEFINES ***************************************************** */
 /* ****************************************************************************************************************** */
 /* ******************* START ******************** HashTable Definition ******************** START ******************* */
 struct entryf_t {
     char *key;
-    DataF data;
+    unsigned long data;
     struct entryf_t *next;//Chain-hashing solution. Pointer to the next element
 };
 typedef struct entryf_t *EntryF;
@@ -58,7 +57,7 @@ long int ht_hashF( HashTableF ht, char *key );
  * ht_newpair - Creates a key-value pair
  *              the key is the file id and the value is NULL
  */
-EntryF ht_newpairF(char *key , PMemory_pool mem_pool);
+EntryF ht_newpairF(char *key , unsigned long file_sn , PMemory_pool mem_pool);
 
 /*
  *  ht_setF - Insert a key-value pair into a hash table (General function thus
@@ -66,7 +65,7 @@ EntryF ht_newpairF(char *key , PMemory_pool mem_pool);
  * @ht  - the hashtable to which the object will be added
  * @key - the hashed id of the file
  */
-EntryF ht_setF(HashTableF ht, char *key, bool* object_exists , PMemory_pool mem_pool);
+EntryF ht_setF(HashTableF ht, char *key, bool* object_exists , unsigned long file_sn , PMemory_pool mem_pool);
 
 /*
  * ht_getF - Retrieve pointer for file element with corresponding key in hash table
@@ -74,7 +73,7 @@ EntryF ht_setF(HashTableF ht, char *key, bool* object_exists , PMemory_pool mem_
  * @ht  - the hashtable to which the object will be added
  * @key - the hashed id of the object
  */
-DataF ht_getF(HashTableF ht, char *key );
+unsigned long ht_getF(HashTableF ht, char *key );
 
 /* ********************* END ********************* HashTable Functions ********************* END ******************** */
 

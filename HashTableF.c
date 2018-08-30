@@ -47,7 +47,7 @@ long int ht_hashF( HashTableF ht, char *key ) {
     return hashval % (ht->size_table);
 }
 
-EntryF ht_newpairF(char *key, PMemory_pool mem_pool){
+EntryF ht_newpairF(char *key, unsigned long file_sn , PMemory_pool mem_pool){
     EntryF newpair  = memory_pool_alloc(mem_pool , sizeof(*newpair));
     if(newpair == NULL){
         return NULL;
@@ -58,12 +58,12 @@ EntryF ht_newpairF(char *key, PMemory_pool mem_pool){
         return NULL; //All is allocated in POOL - Nothing to Free
     }
     newpair->key = strcpy(newpair->key , key);
-    newpair->data = NULL;
+    newpair->data = file_sn; //save file sn to compare later between file swith the same id and different sn
     newpair->next = NULL;
     return newpair;
 }
 
-EntryF ht_setF(HashTableF ht, char *key , bool* object_exists, PMemory_pool mem_pool) {
+EntryF ht_setF(HashTableF ht, char *key , bool* object_exists , unsigned long file_sn , PMemory_pool mem_pool) {
     EntryF newpair = NULL;
     EntryF next = NULL;
     EntryF last = NULL;
@@ -78,12 +78,13 @@ EntryF ht_setF(HashTableF ht, char *key , bool* object_exists, PMemory_pool mem_
     }
 
     /* There's already a pair. Let's replace that string. */
-    if( next != NULL && next->key != NULL && strcmp( key, next->key ) == 0 ) {
+    if( next != NULL && next->key != NULL &&
+            ((strcmp( key, next->key ) == 0 ) && (next->data == file_sn))) {
         //Return the pointer to the Block/File that already exists in the hash
         *object_exists = true;
         return next;
     } else { /* Nope, couldn't find it.  Time to grow a pair. */
-        newpair = ht_newpairF(key , mem_pool); //allocate new pair
+        newpair = ht_newpairF(key , file_sn , mem_pool); //allocate new pair
         if(newpair == NULL){
             return NULL;
         }
@@ -105,7 +106,7 @@ EntryF ht_setF(HashTableF ht, char *key , bool* object_exists, PMemory_pool mem_
 }
 
 
-DataF ht_getF(HashTableF ht, char *key ) {
+unsigned long ht_getF(HashTableF ht, char *key ) {
     long int hash_key = ht_hashF(ht, key);
     EntryF pair = ht->table[hash_key];
 

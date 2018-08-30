@@ -31,13 +31,13 @@ Block block_create(char* block_id , unsigned long block_sn ,
     return block;
 }
 
-ErrorCode block_add_file(Block block , char* file_id, PMemory_pool mem_pool){
+ErrorCode block_add_file(Block block , char* file_id, unsigned long file_sn , PMemory_pool mem_pool){
     if(file_id == NULL || block == NULL){ //Check input is valid
         return INVALID_INPUT;
     }
     bool object_exists = false;
 
-    EntryF result = ht_setF(block->files_ht, file_id, &object_exists ,mem_pool);
+    EntryF result = ht_setF(block->files_ht, file_id, &object_exists ,file_sn , mem_pool);
     if(result == NULL){ //Check for memory allocation
         return OUT_OF_MEMORY;
     }

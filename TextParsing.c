@@ -161,7 +161,7 @@ File case_13_VS(FILE *input_file , char buff[BUFFER_SIZE] , int* chunk_line_coun
 
             if(dedup_type == 'B'){ // For File Level deduplication there is noe need to save blocks - all needed information is in block_info in each file
                 new_block = ht_set(ht_blocks , block_id , 1 , *blocks_sn , block_size , 'B', &block_exists , 0 , dedup_type , parent_dir_id , mem_pool);
-                block_add_file(new_block , file_obj->object_id , mem_pool);
+                block_add_file(new_block , file_obj->object_id ,file_obj->object_sn ,  mem_pool);
 
                 if(block_exists == false){
                     (*blocks_sn)++;

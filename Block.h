@@ -50,7 +50,7 @@ Block block_create(char* block_id , unsigned long block_sn ,
  *  @block   - pointer to the block structure to which we want to add the file
  *  @file_id - the id of the file that contains the block
  */
-ErrorCode block_add_file(Block block , char* file_id , PMemory_pool mem_pool);
+ErrorCode block_add_file(Block block , char* file_id , unsigned long file_sn ,PMemory_pool mem_pool);
 
 
 /* ******************** END ******************** Block STRUCT Functions ******************** END ******************** */
