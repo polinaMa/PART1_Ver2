@@ -361,7 +361,8 @@ void print_ht_to_CSV(char dedup_type , char** files_to_read, int num_of_input_fi
                 for(int j = 0 ; j < (temp_block->files_ht->size_table) ; j++){
                     EntryF pair_file_id = temp_block->files_ht->table[j];
                     while( pair_file_id != NULL && pair_file_id->key != NULL) {
-                        unsigned long file_sn = ((File)(ht_get(ht_files , pair_file_id->key)))->object_sn;
+                        //unsigned long file_sn = ((File)(ht_get(ht_files , pair_file_id->key)))->object_sn;
+                        unsigned long file_sn = pair_file_id->data;
                         fprintf(results_file ,"%lu," , file_sn);
                         pair_file_id = pair_file_id->next;
                     }
