@@ -90,7 +90,8 @@ File case_13_VS(FILE *input_file , char buff[BUFFER_SIZE] , int* chunk_line_coun
                 unsigned int file_size , bool* file_was_created, bool* finished_process_blocks ,
                 PMemory_pool mem_pool,char dedup_type,
                 HashTable ht_files , HashTable ht_blocks, HashTable ht_physical_files,
-                unsigned long *files_sn , unsigned long *physical_files_sn, unsigned long *blocks_sn , char* parent_dir_id) {
+                unsigned long *files_sn , unsigned long *physical_files_sn, unsigned long *blocks_sn,
+                char* parent_dir_id, int blocks_filter_param_k) {
     bool read_block = false;   // Params initialization
     bool block_exists = false;
     *read_empty_line_chucnks = false;
@@ -125,6 +126,7 @@ File case_13_VS(FILE *input_file , char buff[BUFFER_SIZE] , int* chunk_line_coun
     // If we got here it means we have blocks to read - Add file to files hashtable
     File file_obj = NULL , file_obj_p = NULL;
     if(dedup_type == 'B'){ //Block level deduplication
+
         file_obj = ht_set(ht_files , object_id , depth ,*files_sn , file_size ,'F',
                           &block_exists , *physical_files_sn,dedup_type , parent_dir_id , mem_pool);
     } else { // File level deduplication
@@ -154,19 +156,34 @@ File case_13_VS(FILE *input_file , char buff[BUFFER_SIZE] , int* chunk_line_coun
 
             block_size = (int)strtol(size,NULL, 10);
 
-            file_add_block(file_obj , block_id , block_size , mem_pool);
-            if(dedup_type == 'F'){
-                file_add_block(file_obj_p , block_id , block_size , mem_pool);
-            }
+            if(blocks_filter_rule(blocks_filter_param_k ,block_id)){
+                file_add_block(file_obj , block_id , block_size , mem_pool);
+                if(dedup_type == 'F'){
+                    file_add_block(file_obj_p , block_id , block_size , mem_pool);
+                }
 
-            if(dedup_type == 'B'){ // For File Level deduplication there is noe need to save blocks - all needed information is in block_info in each file
-                new_block = ht_set(ht_blocks , block_id , 1 , *blocks_sn , block_size , 'B', &block_exists , 0 , dedup_type , parent_dir_id , mem_pool);
-                block_add_file(new_block , file_obj->object_id ,file_obj->object_sn ,  mem_pool);
+                if(dedup_type == 'B'){ // For File Level deduplication there is noe need to save blocks - all needed information is in block_info in each file
+                    new_block = ht_set(ht_blocks , block_id , 1 , *blocks_sn , block_size , 'B', &block_exists , 0 , dedup_type , parent_dir_id , mem_pool);
+                    block_add_file(new_block , file_obj->object_id ,file_obj->object_sn ,  mem_pool);
 
-                if(block_exists == false){
-                    (*blocks_sn)++;
+                    if(block_exists == false){
+                        (*blocks_sn)++;
+                    }
                 }
             }
+//            file_add_block(file_obj , block_id , block_size , mem_pool);
+//            if(dedup_type == 'F'){
+//                file_add_block(file_obj_p , block_id , block_size , mem_pool);
+//            }
+//
+//            if(dedup_type == 'B'){ // For File Level deduplication there is noe need to save blocks - all needed information is in block_info in each file
+//                new_block = ht_set(ht_blocks , block_id , 1 , *blocks_sn , block_size , 'B', &block_exists , 0 , dedup_type , parent_dir_id , mem_pool);
+//                block_add_file(new_block , file_obj->object_id ,file_obj->object_sn ,  mem_pool);
+//
+//                if(block_exists == false){
+//                    (*blocks_sn)++;
+//                }
+//            }
 
             fgets(buff, BUFFER_SIZE, input_file);
             clear_line(buff);
@@ -280,7 +297,8 @@ void update_parent_dir_sn(List previous , List current , int global_depth , int 
 /* *********************************************** Parsing Functions ************************************************ */
 void print_ht_to_CSV(char dedup_type , char** files_to_read, int num_of_input_files ,
                      unsigned long blocks_sn, unsigned long files_sn, unsigned long dir_sn , unsigned long physical_files_sn,
-                     HashTable ht_files , HashTable ht_blocks, HashTable ht_dirs, HashTable ht_physical_files , char* srv_idx_first, char* srv_idx_last){
+                     HashTable ht_files , HashTable ht_blocks, HashTable ht_dirs, HashTable ht_physical_files ,
+                     char* srv_idx_first, char* srv_idx_last, int blocks_filter_param_k){
     Entry pair = NULL;
     File temp_file = NULL;
     Block temp_block = NULL;
@@ -294,8 +312,9 @@ void print_ht_to_CSV(char dedup_type , char** files_to_read, int num_of_input_fi
     } else {
         fileName = strcpy(fileName , "P_dedup_");
     }
-    char temp_idxs[15];
-    sprintf(temp_idxs , "%c%c%c_%c%c%c.csv" , srv_idx_first[0],srv_idx_first[1],  srv_idx_first[2] , srv_idx_last[0] , srv_idx_last[1] , srv_idx_last[2]);
+
+    char temp_idxs[20];
+    sprintf(temp_idxs , "k%d_%c%c%c_%c%c%c.csv", blocks_filter_param_k, srv_idx_first[0], srv_idx_first[1], srv_idx_first[2], srv_idx_last[0], srv_idx_last[1] ,srv_idx_last[2]);
     fileName = strcat(fileName , temp_idxs);
 
     // Open the output file
@@ -427,3 +446,106 @@ void print_ht_to_CSV(char dedup_type , char** files_to_read, int num_of_input_fi
     fclose(results_file);
     free(fileName);
 }
+
+bool blocks_filter_rule(int blocks_filter_param_k, char* id){
+
+    char ch = *id;
+    int cnt_zeros = 0;
+    int l = 0;
+    char value[BIT_ARRAY_SIZE] = "";
+
+    const char* quads[] = {"0000", "0001", "0010", "0011", "0100", "0101",
+                           "0110", "0111", "1000", "1001", "1010", "1011",
+                           "1100", "1101", "1110", "1111"};
+    int id_length = strlen(id);
+    for (int i = 0; i < id_length ; i++) {
+        if (ch >= '0' && ch <= '9')
+            strncat(value, quads[ch - '0'], 4);
+        if (ch >= 'A' && ch <= 'F')
+            strncat(value, quads[10 + ch - 'A'], 4);
+        if (ch >= 'a' && ch <= 'f')
+            strncat(value, quads[10 + ch - 'a'], 4);
+
+        ch = *(++id);
+    }
+
+    int value_length = strlen(value);
+    int j = value_length;
+
+//    printf("The string in binary is: \n");
+//    printf("%s\n", value);
+
+    while(cnt_zeros < blocks_filter_param_k){
+        if(value[l] == '0'){
+            cnt_zeros++;
+            l++;
+        } else {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool ascii_to_binary(char *input, char **value, int len, int blocks_filter_param_k) {
+    if(!input){
+        printf("ERROR in input file\n");
+    }
+
+    if (len == 0) {
+        printf("Length argument is zero\n");
+        return false;
+    }
+    /* Assign the len to be in multiply of 4 bits */
+    int str_len = len * 4;
+
+    (*value) = malloc(sizeof(char)*(str_len + 1));
+    if ((*value) == NULL) {
+        printf("Can't allocate binary string\n");
+        return false;
+    }
+
+    if (memset((*value), 0, (str_len)) == NULL) {
+        printf("Can't initialize memory to zero\n");
+        return false;
+    }
+
+    for (int i = 0; i < len; i++) {
+        char ch = input[i];
+        char *o = *value + 4 * i;
+
+        for (int b = 3; b >= 0; b--) {
+            *o++ = (ch & (1 << b)) ? '1' : '0';
+        }
+    }
+    (*value)[str_len] = '\0';
+
+    /* Print the conversion result */
+    printf("The result of conversion to binary is:\n");
+    printf("%s\n", *value);
+
+    /* Check if there is at lest blocks_filter_param_k zeros */
+    int cnt_zeros = 0, l = 0;
+    while(cnt_zeros < blocks_filter_param_k){
+        if((*value)[l] == '0'){
+            cnt_zeros++;
+            l++;
+        } else {
+            return false;
+        }
+    }
+    free(*value);
+    return true;
+}
+
+//052fe53718
+//0000010100101111111001010011011100011000 - Gala
+//0000010100101111111001010011011100011000
+//ff22639afb
+//0110110101101100011011010001001010011101
+//0110110101101100011011010001001010011101
+//6d6c6d129d
+//00001111010110101001101110011000010111010110110101101100011011010001001010011101
+//0000111101011010100110111001100001011101
+//0001111101001010010000101100110100110111
+//1010001011011010000111100111011011011111

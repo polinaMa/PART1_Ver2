@@ -25,10 +25,14 @@ int main(int argc , char** argv){
     /* ----------------------- Parameters Declarations & Initialization ----------------------- */
     /* Define Files to be read */
     int num_input_files = 0;
+    int blocks_filter_param_k = 0;
     char* current_working_directory = NULL;
     char** files_to_read = NULL;
     char srv_idx_first[FILE_SYSTEM_ID_LEN+2];
     char srv_idx_last[FILE_SYSTEM_ID_LEN+2];
+
+    printf("argc = %d\n", argc);
+    printf("argv[5] = %s\n", argv[5]);
 
     if(argc == 1){
         printf("No Extra Command Line Argument Passed Other Than Program Name\n");
@@ -45,6 +49,9 @@ int main(int argc , char** argv){
         strcpy(files_to_read[i] , argv[4 + i]);
     }
     roots = memory_pool_alloc(mem_pool, num_input_files* sizeof(*roots));
+    blocks_filter_param_k = atoi(argv[num_input_files + 4]);
+    printf("---> The filter number for blocks: k = %d\n",blocks_filter_param_k);
+
 
     // File  Manipulation Variables
     FILE *input_file = NULL;
@@ -220,7 +227,7 @@ int main(int argc , char** argv){
                                                          &read_empty_line_chucnks , depth , object_id,file_size,
                                                          &file_was_created, &finished_process_blocks , mem_pool,dedup_type,
                                                          ht_files , ht_blocks, ht_physical_files,
-                                                         &files_sn , &physical_files_sn, &blocks_sn, parent_dir_id);
+                                                         &files_sn , &physical_files_sn, &blocks_sn, parent_dir_id, blocks_filter_param_k);
                         // Add object (File or Directory) to curr_depth_objects list
                         if ((obj_type == 'F') && (is_zero_size_file == false) && (file_was_created == true)){
                             if(current_file_object != NULL){
@@ -289,7 +296,8 @@ int main(int argc , char** argv){
 
     print_ht_to_CSV(dedup_type, files_to_read , num_input_files,
                     blocks_sn, files_sn, dir_sn, physical_files_sn,
-                    ht_files, ht_blocks, ht_dirs, ht_physical_files, srv_idx_first, srv_idx_last);
+                    ht_files, ht_blocks, ht_dirs, ht_physical_files,
+                    srv_idx_first, srv_idx_last, blocks_filter_param_k);
 
     //Free All Hash tables and Lists
     listDestroy(previous_depth_objects);
@@ -301,3 +309,38 @@ int main(int argc , char** argv){
 
     return 0;
 }
+
+//#include <stdio.h>
+//#include <stdlib.h>
+//#include <string.h>
+//#include <ctype.h>
+//#include "Utilities.h"
+//#include "TextParsing.h"
+
+
+//int main(){
+//    FILE *input_file = NULL;
+//    char* current_file = NULL;
+//    input_file = fopen("/Users/mihushamsh/CLionProjects/PART1_Ver2_new/inputs/input_example_gala" , "r");
+//    char buff[BUFFER_SIZE];
+//    //fgets(buff, BUFFER_SIZE , input_file); //Read First Line
+//
+//    char* result_conversion;
+//    bool res = false;
+//    while (fgets(buff, BUFFER_SIZE , input_file)) {
+//        res = blocks_filter_rule(4, buff);
+//        //    res = ascii_to_binary(buff, &result_conversion, strlen(buff), 4);
+//        printf("The result for k = 4 is :\n");
+//        printf("res = %d\n", res);
+//        res = blocks_filter_rule(8, buff);
+//        //    res = ascii_to_binary(buff, &result_conversion ,strlen(buff), 8);
+//        printf("The result for k = 8 is :\n");
+//        printf("res = %d\n", res);
+//
+//        clear_line(buff);
+//        fgets(buff, BUFFER_SIZE, input_file);
+//    }
+//
+//    fclose(input_file);
+//
+//}

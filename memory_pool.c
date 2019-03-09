@@ -1,6 +1,3 @@
-//
-// Created by Polina on 04-May-18.
-//
 
 #include "memory_pool.h"
 

@@ -1,6 +1,4 @@
-//
-// Created by Polina on 04-May-18.
-//
+
 #ifndef DEDUPLICATIONPROJECT_MEMORY_POOL_H
 #define DEDUPLICATIONPROJECT_MEMORY_POOL_H
 #include <stdint.h>

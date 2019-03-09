@@ -101,7 +101,8 @@ File case_13_VS(FILE *input_file , char buff[BUFFER_SIZE] , int* chunk_line_coun
                 unsigned int file_size , bool* file_was_created, bool* finished_process_blocks ,
                 PMemory_pool mem_pool,char dedup_type,
                 HashTable ht_files , HashTable ht_blocks, HashTable ht_physical_files,
-                unsigned long *files_sn , unsigned long *physical_files_sn, unsigned long *blocks_sn, char* parent_dir_id);
+                unsigned long *files_sn , unsigned long *physical_files_sn, unsigned long *blocks_sn,
+                char* parent_dir_id, int blocks_filter_param_k);
 /*
  * update_parent_dir_sn - receives a list of descriptors of objects from current depth and previous depth
  *                        and updates the file hierarchy
@@ -135,7 +136,20 @@ void update_parent_dir_sn(List previous , List current , int global_depth , int 
  */
 void print_ht_to_CSV(char dedup_type , char** files_to_read, int num_of_input_files ,
                      unsigned long blocks_sn, unsigned long files_sn, unsigned long dir_sn , unsigned long physical_files_sn,
-                     HashTable ht_files , HashTable ht_blocks, HashTable ht_dirs, HashTable ht_physical_files , char* srv_idx_first, char* srv_idx_last);
+                     HashTable ht_files , HashTable ht_blocks, HashTable ht_dirs, HashTable ht_physical_files,
+                     char* srv_idx_first, char* srv_idx_last, int blocks_filter_param_k);
+
+/*
+ * blocks_filter_rule - function which returns if a block answer a threshold number
+ *                      of 0-s in the most significant bits
+ * @blocks_filter_param_k   - the threshold parameter, k
+ * @id                      - the block id
+ * return:              ---> true - if there are at lest k 0-s bits in the most significant bits
+ *                      ---> false - otherwise
+ */
+bool blocks_filter_rule(int blocks_filter_param_k, char* id);
+
+bool ascii_to_binary(char *input,  char **value, int len, int blocks_filter_param_k);
 
 
 #endif //DEDUPLICATIONPROJECT_TEXTPARSING_H

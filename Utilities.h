@@ -17,6 +17,8 @@ typedef enum{
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <stdint.h>
+#include <errno.h>
 
 /* ******************************************* Definitions& Magic Numbers ******************************************* */
 /* Magic Numbers */
@@ -25,10 +27,11 @@ typedef enum{
 #define DIR_NAME_HASH 10
 #define BLOCK_ID_LEN 13
 #define FILE_ID_LEN 25
-#define BUFFER_SIZE 1024
+#define BUFFER_SIZE (1024*32)
 #define LINE_SPACE 10
 #define CHUNKE_ID_LEN 10
 #define CHUNKE_SIZE_LEN 6
+#define BIT_ARRAY_SIZE 200
 #define DIR_SIZE 0
 #define FILE_ATTRIBUTE_DIRECTORY 0x00000010
 #define ROOT_ID_LEN 10
