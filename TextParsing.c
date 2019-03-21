@@ -171,19 +171,6 @@ File case_13_VS(FILE *input_file , char buff[BUFFER_SIZE] , int* chunk_line_coun
                     }
                 }
             }
-//            file_add_block(file_obj , block_id , block_size , mem_pool);
-//            if(dedup_type == 'F'){
-//                file_add_block(file_obj_p , block_id , block_size , mem_pool);
-//            }
-//
-//            if(dedup_type == 'B'){ // For File Level deduplication there is noe need to save blocks - all needed information is in block_info in each file
-//                new_block = ht_set(ht_blocks , block_id , 1 , *blocks_sn , block_size , 'B', &block_exists , 0 , dedup_type , parent_dir_id , mem_pool);
-//                block_add_file(new_block , file_obj->object_id ,file_obj->object_sn ,  mem_pool);
-//
-//                if(block_exists == false){
-//                    (*blocks_sn)++;
-//                }
-//            }
 
             fgets(buff, BUFFER_SIZE, input_file);
             clear_line(buff);
@@ -447,7 +434,7 @@ void print_ht_to_CSV(char dedup_type , char** files_to_read, int num_of_input_fi
     free(fileName);
 }
 
-bool blocks_filter_rule(int blocks_filter_param_k, char* id){
+bool blocks_filter_rule2(int blocks_filter_param_k, char* id){
 
     char ch = *id;
     int cnt_zeros = 0;
@@ -470,10 +457,6 @@ bool blocks_filter_rule(int blocks_filter_param_k, char* id){
     }
 
     int value_length = strlen(value);
-    int j = value_length;
-
-//    printf("The string in binary is: \n");
-//    printf("%s\n", value);
 
     while(cnt_zeros < blocks_filter_param_k){
         if(value[l] == '0'){
@@ -486,6 +469,33 @@ bool blocks_filter_rule(int blocks_filter_param_k, char* id){
 
     return true;
 }
+
+bool blocks_filter_rule(int blocks_filter_param_k, char* id){
+
+    char ch;
+    uint64_t id_in_bits = 0;
+    int id_length = strlen(id);
+    int mask_length = (id_length*4) - blocks_filter_param_k;
+
+    for (int i = 0; i < id_length ; i++) {
+        ch = id[id_length - i -1];
+        if (ch >= '0' && ch <= '9') {
+            id_in_bits |= (uint64_t)((ch - '0')) << (i*4);
+        } else if (ch >= 'A' && ch <= 'F') {
+            id_in_bits |= (uint64_t)((10 + ch - 'A')) << (i*4);
+        } else if (ch >= 'a' && ch <= 'f') {
+            id_in_bits |= (uint64_t)((10 + ch - 'a')) << (i*4);
+        }
+
+    }
+    uint64_t id_after_filter = (uint64_t)(id_in_bits >> mask_length);
+    if(!id_after_filter){
+        return true;
+    }
+
+    return false;
+}
+
 
 bool ascii_to_binary(char *input, char **value, int len, int blocks_filter_param_k) {
     if(!input){
@@ -515,7 +525,15 @@ bool ascii_to_binary(char *input, char **value, int len, int blocks_filter_param
         char *o = *value + 4 * i;
 
         for (int b = 3; b >= 0; b--) {
-            *o++ = (ch & (1 << b)) ? '1' : '0';
+            if (ch >= '0' && ch <= '9') {
+                *o++ = ((ch - '0') & (1 << b)) ? '1' : '0';
+            }
+            else if (ch >= 'A' && ch <= 'F') {
+                *o++ = ((10 + ch - 'A') & (1 << b)) ? '1' : '0';
+            }
+            else if (ch >= 'a' && ch <= 'f') {
+                *o++ = ((10 + ch - 'a') & (1 << b)) ? '1' : '0';
+            }
         }
     }
     (*value)[str_len] = '\0';
@@ -541,11 +559,14 @@ bool ascii_to_binary(char *input, char **value, int len, int blocks_filter_param
 //052fe53718
 //0000010100101111111001010011011100011000 - Gala
 //0000010100101111111001010011011100011000
+//0000010100101111111001010011011100011000
 //ff22639afb
 //0110110101101100011011010001001010011101
 //0110110101101100011011010001001010011101
+//0110110101101100011011010001001010011101
 //6d6c6d129d
-//00001111010110101001101110011000010111010110110101101100011011010001001010011101
+//0000111101011010100110111001100001011101
+//0110110101101100011011010001001010011101
 //0000111101011010100110111001100001011101
 //0001111101001010010000101100110100110111
 //1010001011011010000111100111011011011111
